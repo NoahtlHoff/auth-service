@@ -34,7 +34,7 @@ builder.Services.AddOpenApi(options =>
         return Task.CompletedTask;
     });
 });
-
+ 
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
