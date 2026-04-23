@@ -1,5 +1,4 @@
-﻿// IUserRepository.cs
-using AuthService.Models;
+﻿using AuthService.Models;
 
 namespace AuthService.Interfaces;
 
