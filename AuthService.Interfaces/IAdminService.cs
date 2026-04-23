@@ -1,6 +1,4 @@
 ﻿using AuthService.Contracts;
-using LeetCodeSolutions.Problems.AdminResult;
-using LeetCodeSolutions.Problems.ChangePasswordRequest;
 
 namespace AuthService.Interfaces;
 

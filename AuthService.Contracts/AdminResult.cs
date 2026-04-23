@@ -1,3 +1,3 @@
-﻿namespace LeetCodeSolutions.Problems.AdminResult;
+﻿namespace AuthService.Contracts;
 
 public record AdminResult(int Id, string Email, DateTime CreatedAt);
