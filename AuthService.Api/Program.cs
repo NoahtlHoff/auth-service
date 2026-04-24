@@ -1,13 +1,10 @@
 using AuthService.Interfaces;
-using AuthService.Models;
 using AuthService.Repository;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
-using Scalar.AspNetCore;
-using System.Security.Cryptography;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,25 +14,51 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddOpenApi(options =>
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+   .AddJwtBearer(options =>
+   {
+       options.TokenValidationParameters = new TokenValidationParameters
+       {
+           ValidateIssuer = true,
+           ValidateAudience = true,
+           ValidateLifetime = true,
+           ValidateIssuerSigningKey = true,
+
+           ValidIssuer = builder.Configuration["Jwt:Issuer"],
+           ValidAudience = builder.Configuration["Jwt:Audience"],
+           IssuerSigningKey = new SymmetricSecurityKey(
+               System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+       };
+   });
+
+builder.Services.AddSwaggerGen(c =>
 {
-    options.AddDocumentTransformer((document, context, ct) =>
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        document.Components ??= new();
-        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-        document.Components.SecuritySchemes.Add("Bearer", new OpenApiSecurityScheme
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter: Bearer {your JWT}"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
         {
-            Type = SecuritySchemeType.Http,
-            Scheme = "Bearer",
-            BearerFormat = "JWT",
-            In = ParameterLocation.Header,
-            Name = "Authorization"
-        });
-        return Task.CompletedTask;
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
- 
-builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAdminService, AdminService>();
@@ -44,8 +67,8 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 var app = builder.Build();
 
-app.MapOpenApi();
-app.MapScalarApiReference();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -56,17 +79,6 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
-
-    if (!db.Users.Any())
-    {
-        db.Users.Add(new User
-        {
-            Email = "admin@admin.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-            Role = "admin"
-        });
-        await db.SaveChangesAsync();
-    }
 }
 
 app.Run();
