@@ -67,6 +67,6 @@ stages:
               resourceGroup: $(RESOURCE_GROUP)
               imageToDeploy: $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.SourceVersion)
               environmentVariables: >
-                ConnectionStrings__DefaultConnection=secretref:connectionstrings--defaultconnection
-                Jwt__PrivateKey=secretref:jwt--privatekey
-                Jwt__PublicKey=secretref:jwt--publickey
+                ConnectionStrings__DefaultConnection=$(ConnectionStrings__DefaultConnection__Auth)
+                Jwt__PrivateKey=$(Jwt__PrivateKey)
+                Jwt__PublicKey=$(Jwt__PublicKey)
