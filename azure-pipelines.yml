@@ -1,0 +1,72 @@
+trigger:
+  branches:
+    include: [main]
+
+pr:
+  branches:
+    include: [main]
+
+variables:
+  - group: snapdetective-secrets
+  - name: ACR_NAME
+    value: snapdetectiveacr
+  - name: IMAGE_NAME
+    value: snapdetective-auth
+  - name: CONTAINER_APP_NAME
+    value: auth-service
+  - name: RESOURCE_GROUP
+    value: SnapDetective
+
+stages:
+  - stage: BuildAndPush
+    displayName: Build & Push to ACR
+    jobs:
+      - job: Build
+        pool:
+          name: 'NoahLocal'
+        steps:
+          - checkout: self
+
+          - task: Docker@2
+            displayName: Build
+            inputs:
+              containerRegistry: 'snapdetective-acr'
+              repository: $(IMAGE_NAME)
+              command: build
+              Dockerfile: Dockerfile
+              buildContext: .
+              tags: |
+                $(Build.SourceVersion)
+                latest
+              arguments: --build-arg AZURE_ARTIFACTS_PAT=$(AZURE_ARTIFACTS_PAT)
+
+          - task: Docker@2
+            displayName: Push
+            inputs:
+              containerRegistry: 'snapdetective-acr'
+              repository: $(IMAGE_NAME)
+              command: push
+              tags: |
+                $(Build.SourceVersion)
+                latest
+
+  - stage: Deploy
+    displayName: Deploy to Container Apps
+    dependsOn: BuildAndPush
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: Deploy
+        pool:
+          name: 'NoahLocal'
+        steps:
+          - task: AzureContainerApps@1
+            displayName: Deploy to Container App
+            inputs:
+              azureSubscription: 'snapdetective-subscription'
+              containerAppName: $(CONTAINER_APP_NAME)
+              resourceGroup: $(RESOURCE_GROUP)
+              imageToDeploy: $(ACR_NAME).azurecr.io/$(IMAGE_NAME):$(Build.SourceVersion)
+              environmentVariables: >
+                ConnectionStrings__DefaultConnection=secretref:connectionstrings--defaultconnection
+                Jwt__PrivateKey=secretref:jwt--privatekey
+                Jwt__PublicKey=secretref:jwt--publickey
