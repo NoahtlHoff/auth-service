@@ -38,7 +38,7 @@ stages:
               tags: |
                 $(Build.SourceVersion)
                 latest
-              arguments: --build-arg AZURE_ARTIFACTS_PAT=$(AZURE_ARTIFACTS_PAT)
+              arguments: --platform linux/amd64 --build-arg AZURE_ARTIFACTS_PAT=$(AZURE_ARTIFACTS_PAT)
 
           - task: Docker@2
             displayName: Push
